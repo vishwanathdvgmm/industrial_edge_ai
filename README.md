@@ -109,40 +109,55 @@ WebSocket broadcast → React Dashboard
 
 ```
 industrial_edge_ai/
-├── backend/
-│   ├── main.py               ← FastAPI app + WebSocket + pipeline loop
-│   ├── requirements.txt
-│   ├── .env.example
-│   ├── agent/
-│   │   ├── state.py          ← AgentState TypedDict
-│   │   ├── graph.py          ← LangGraph compiled graph
-│   │   └── nodes/
-│   │       ├── classifier.py ← Node 1
-│   │       ├── root_cause.py ← Node 2
-│   │       ├── action.py     ← Node 3
-│   │       └── reporter.py   ← Node 4
-│   ├── vision/
-│   │   ├── capture.py        ← Async RTSP/USB frame generator
-│   │   ├── preprocess.py     ← BGR→RGB, resize, normalize
-│   │   └── detector.py       ← YOLOv8 wrapper
-│   ├── db/
-│   │   ├── mongo.py          ← MongoDB client + queries
-│   │   └── gridfs_helper.py  ← Image/PDF binary storage
-│   └── pdf/
-│       ├── generator.py      ← WeasyPrint renderer
-│       └── template.html     ← Report HTML template
-├── frontend/
-│   └── src/
-│       ├── App.jsx           ← Root component
-│       ├── index.css         ← Design system
-│       ├── components/
-│       │   ├── TopBar.jsx    ← Status + controls
-│       │   ├── LiveFeed.jsx  ← Camera stream
-│       │   ├── EventList.jsx ← Defect event cards
-│       │   └── TrendChart.jsx← Recharts 24h trend
-│       └── hooks/
-│           └── useWebSocket.js ← WS + API helpers
-└── docker-compose.yml
+├── 📁 backend
+│   ├── 📁 agent
+│   │   ├── 📁 nodes
+│   │   │   ├── 🐍 __init__.py
+│   │   │   ├── 🐍 action.py
+│   │   │   ├── 🐍 classifier.py
+│   │   │   ├── 🐍 reporter.py
+│   │   │   └── 🐍 root_cause.py
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 graph.py
+│   │   └── 🐍 state.py
+│   ├── 📁 db
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 gridfs_helper.py
+│   │   └── 🐍 mongo.py
+│   ├── 📁 pdf
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 generator.py
+│   │   └── 🌐 template.html
+│   ├── 📁 vision
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 capture.py
+│   │   ├── 🐍 detector.py
+│   │   └── 🐍 preprocess.py
+│   ├── 🐳 Dockerfile
+│   ├── 🐍 llm.py
+│   ├── 🐍 main.py
+│   └── 📄 requirements.txt
+├── 📁 frontend
+│   ├── 📁 src
+│   │   ├── 📁 components
+│   │   │   ├── 📄 EventList.jsx
+│   │   │   ├── 📄 LiveFeed.jsx
+│   │   │   ├── 📄 TopBar.jsx
+│   │   │   └── 📄 TrendChart.jsx
+│   │   ├── 📁 hooks
+│   │   │   └── 📄 useWebSocket.js
+│   │   ├── 📄 App.jsx
+│   │   ├── 🎨 index.css
+│   │   └── 📄 main.jsx
+│   ├── 🐳 Dockerfile
+│   ├── 🌐 index.html
+│   ├── ⚙️ nginx.conf
+│   ├── ⚙️ package-lock.json
+│   ├── ⚙️ package.json
+│   └── 📄 vite.config.js
+├── ⚙️ .gitignore
+├── 📝 README.md
+└── ⚙️ docker-compose.yml
 ```
 
 ---
