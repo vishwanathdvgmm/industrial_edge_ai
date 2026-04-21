@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: edge_ai_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: edge_ai
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edge_ai_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env          # copy .env.example → .env and fill your key
+    environment:
+      # Override specific values when running in Docker
+      MONGO_URI: mongodb://mongodb:27017
+      MONGO_DB: edge_ai
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend/data:/app/data   # persist captured frames
+    devices:
+      - /dev/video0:/dev/video0    # USB webcam passthrough (Linux only, remove on Windows)
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: edge_ai_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:

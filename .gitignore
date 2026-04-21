@@ -1,0 +1,11 @@
+PDF's/
+original/
+.venv/
+__pycache__/
+node_modules/
+.env
+*lock.json
+*.log
+*.pdf
+*.pt
+data/
