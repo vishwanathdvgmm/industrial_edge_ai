@@ -5,7 +5,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return (
     <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)',
                   borderRadius: 4, padding: '8px 12px', fontFamily: 'var(--mono)', fontSize: 11 }}>
-      <div style={{ color: 'var(--muted)', marginBottom: 4 }}>{label}:00 UTC</div>
+      <div style={{ color: 'var(--muted)', marginBottom: 4 }}>{label}</div>
       {payload.map(p => (
         <div key={p.dataKey} style={{ color: p.color }}>
           {p.name}: {p.value}
@@ -17,11 +17,18 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export function TrendChart({ data }) {
   // data: [{_id: "2026-04-21T10", count: 5, critical: 1}, ...]
-  const chartData = data.map(d => ({
-    hour: d._id?.slice(11) || d._id,
-    total: d.count,
-    critical: d.critical,
-  }))
+  const chartData = data.map(d => {
+    const rawHour = d._id?.slice(11) || d._id;
+    // d._id is "YYYY-MM-DDTHH", append :00:00Z to parse as UTC
+    const dateObj = new Date(d._id + ":00:00Z");
+    const localHour = dateObj.getHours().toString().padStart(2, '0');
+    
+    return {
+      hour: `${localHour}:00`,
+      total: d.count,
+      critical: d.critical,
+    };
+  })
 
   return (
     <div className="trend-panel">

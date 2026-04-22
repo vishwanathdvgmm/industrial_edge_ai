@@ -144,17 +144,22 @@ async def process_defect_event(initial_state: AgentState, camera_id: str, line_i
         print(f"\n❌ AGENT TASK CRASHED: {e}")
         traceback.print_exc()
 
+import time as _time
+
+AGENT_COOLDOWN_SEC = 10.0  # Minimum seconds between agent triggers for the same detected class
+
 async def run_pipeline_loop(camera_id: str = "cam0", line_id: str = "line_01"):
     """
     Continuously:
       1. Read frame from camera
       2. Run YOLOv8 inference
       3. Broadcast annotated frame over WebSocket
-      4. Trigger agent in background (if not already running)
+      4. Trigger agent in background with cooldown debounce
     """
     global pipeline_running
     config = get_system_config()
     agent_task = None
+    last_trigger: dict[str, float] = {}  # class_name -> last trigger timestamp
 
     try:
         async for bgr_frame in frame_generator(camera_id):
@@ -180,9 +185,17 @@ async def run_pipeline_loop(camera_id: str = "cam0", line_id: str = "line_01"):
             if not detections:
                 continue
 
-            # ── Step 4: Fire background agent task (Debounced) ──
-            if agent_task is not None and not agent_task.done():
-                continue  # Skip if we are currently generating a report
+            # ── Step 4: Cooldown debounce — prevent LLM spam for same object ──
+            top_class = detections[0]["class_name"]
+            now = _time.monotonic()
+            last_ts = last_trigger.get(top_class, 0.0)
+
+            # Skip if agent is still running OR cooldown hasn't expired for this class
+            if (agent_task is not None and not agent_task.done()) or \
+               (now - last_ts < AGENT_COOLDOWN_SEC):
+                continue
+
+            last_trigger[top_class] = now
 
             initial_state: AgentState = {
                 "frame_path": frame_path,

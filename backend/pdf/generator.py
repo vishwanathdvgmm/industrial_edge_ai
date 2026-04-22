@@ -11,15 +11,34 @@ except Exception as e:
 
 TEMPLATE_PATH = Path(__file__).parent / "template.html"
 
+def _to_ist(utc_str: str) -> str:
+    """Convert a UTC ISO string to IST (UTC+5:30) formatted string."""
+    from datetime import datetime, timezone, timedelta
+    try:
+        # Handle both with and without trailing Z
+        clean = utc_str.replace("Z", "+00:00")
+        # If no timezone info, assume UTC
+        if "+" not in clean and "-" not in clean[10:]:
+            clean += "+00:00"
+        dt_utc = datetime.fromisoformat(clean)
+        ist = timezone(timedelta(hours=5, minutes=30))
+        dt_ist = dt_utc.astimezone(ist)
+        return dt_ist.strftime("%Y-%m-%d %H:%M:%S IST")
+    except Exception:
+        return utc_str[:19].replace("T", " ") + " UTC"
+
 def _render_html(report: dict) -> str:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     defect = report.get("defect", {})
     analysis = report.get("analysis", {})
     decision = report.get("decision", {})
 
+    raw_ts = report.get("generated_at", "")
+    display_ts = _to_ist(raw_ts)
+
     replacements = {
         "{{ report_id }}": report.get("report_id", "N/A"),
-        "{{ generated_at }}": report.get("generated_at", "")[:19].replace("T", " "),
+        "{{ generated_at }}": display_ts,
         "{{ camera_id }}": report.get("camera_id", "cam0"),
         "{{ line_id }}": report.get("line_id", "line0"),
         "{{ defect_type }}": defect.get("type", "UNKNOWN"),
@@ -28,7 +47,7 @@ def _render_html(report: dict) -> str:
         "{{ zone }}": defect.get("zone", "SURFACE"),
         "{{ confidence_pct }}": str(round(defect.get("confidence", 0) * 100, 1)),
         "{{ action }}": decision.get("action", "LOG_ONLY"),
-        "{{ timestamp }}": report.get("generated_at", "")[:19].replace("T", " "),
+        "{{ timestamp }}": display_ts,
         "{{ cause_hypothesis }}": analysis.get("cause_hypothesis", ""),
         "{{ action_rationale }}": decision.get("rationale", ""),
     }

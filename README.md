@@ -52,19 +52,30 @@ All of this happens within seconds. Operators monitor the entire factory floor t
 
 ```mermaid
 graph TD
-    CAM["📷 Camera Source\n(USB / DroidCam / IP)"]
-    CS["CameraStream Thread\n(Zero-Latency Buffer)"]
-    YOLO["YOLOv8 Inference\nconf ≥ threshold gate"]
-    WS_OUT["WebSocket Broadcast\nAnnotated JPEG Frame"]
-    AGENT["LangGraph Agent\n(background asyncio Task)"]
-    N1["Node 1: Classifier\ntype · severity · zone"]
-    N2["Node 2: Root Cause\nhypothesis + DB history"]
-    N3["Node 3: Action\nHALT / FLAG / LOG"]
-    N4["Node 4: Reporter\nreport_payload"]
-    PDF["PDF Generator\n(ProcessPool — no GIL freeze)"]
-    MONGO["MongoDB\ndefect_events collection"]
-    GRIDFS["GridFS\nFrame PNGs + PDF blobs"]
-    REACT["React Dashboard\nLive Feed · Events · Trend Chart"]
+    CAM["📷 Camera Source"]
+    CS["CameraStream Thread"]
+    YOLO["YOLOv8 Inference
+    conf ≥ threshold gate"]
+    WS_OUT["WebSocket Broadcast
+    Annotated JPEG Frame"]
+    AGENT["LangGraph Agent
+    (background asyncio Task)"]
+    N1["Node 1: Classifier
+    type · severity · zone"]
+    N2["Node 2: Root Cause
+    hypothesis + DB history"]
+    N3["Node 3: Action
+    HALT / FLAG / LOG"]
+    N4["Node 4: Reporter
+    report_payload"]
+    PDF["PDF Generator
+    (ProcessPool — no GIL freeze)"]
+    MONGO["MongoDB
+    defect_events collection"]
+    GRIDFS["GridFS
+    Frame PNGs + PDF blobs"]
+    REACT["React Dashboard
+    Live Feed · Events · Trend Chart"]
 
     CAM --> CS --> YOLO
     YOLO -->|"every frame"| WS_OUT --> REACT

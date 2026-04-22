@@ -26,6 +26,8 @@ def get_llm(temperature: float = 0, max_tokens: int = 512) -> BaseChatModel:
             google_api_key=os.getenv("GEMINI_API_KEY"),
             temperature=temperature,
             max_output_tokens=max_tokens,
+            max_retries=1,
+            timeout=15.0,
         )
 
     elif LLM_PROVIDER == "openai":
