@@ -44,7 +44,7 @@ Industrial Edge AI is a production-grade agentic system that monitors factory ca
 
 All of this happens within seconds. Operators monitor the entire factory floor through a live React dashboard with real-time WebSocket streaming.
 
-> **Current Status:** Beta — Single-camera pipeline fully operational. Multi-camera, ONNX acceleration, and structured LLM output are planned for v1.0 release.
+> **Current Status:** v1.0 Production Stable — Unified Vision Analyzer, Structured Pydantic Outputs, and IST Localization complete. Multi-camera support is the next objective.
 
 ---
 
@@ -60,14 +60,10 @@ graph TD
     Annotated JPEG Frame"]
     AGENT["LangGraph Agent
     (background asyncio Task)"]
-    N1["Node 1: Classifier
-    type · severity · zone"]
-    N2["Node 2: Root Cause
-    hypothesis + DB history"]
-    N3["Node 3: Action
-    HALT / FLAG / LOG"]
-    N4["Node 4: Reporter
-    report_payload"]
+    N1["Node 1: Unified Analyzer
+    Gemini 1.5 Vision (RCA + Action)"]
+    N2["Node 2: Reporter
+    report_payload builder"]
     PDF["PDF Generator
     (ProcessPool — no GIL freeze)"]
     MONGO["MongoDB
@@ -80,9 +76,9 @@ graph TD
     CAM --> CS --> YOLO
     YOLO -->|"every frame"| WS_OUT --> REACT
     YOLO -->|"detection ≥ threshold"| AGENT
-    AGENT --> N1 --> N2 --> N3 --> N4
-    N4 --> PDF --> GRIDFS
-    N4 --> MONGO
+    AGENT --> N1 --> N2
+    N2 --> PDF --> GRIDFS
+    N2 --> MONGO
     MONGO --> WS_OUT
     WS_OUT --> REACT
 ```
@@ -95,7 +91,7 @@ graph TD
 | ------------------ | -------------------------------------------------- | ------------------------------------ |
 | Computer Vision    | YOLOv8n (Ultralytics)                              | Nano model — fastest on CPU          |
 | Agent Orchestrator | LangGraph (stateful graph)                         | 4-node pipeline with shared state    |
-| LLM                | Groq / Gemini / OpenAI                             | Pluggable via `LLM_PROVIDER` env var |
+| LLM                | Google Gemini 1.5 Flash             | Native Vision inspection + RCA      |
 | Backend            | FastAPI + asyncio                                  | Async WebSocket streaming            |
 | Database           | MongoDB 7.0 + GridFS                               | Document store + binary file storage |
 | Frontend           | React 18 (Vite) + Recharts                         | Live WebSocket dashboard             |
@@ -159,9 +155,10 @@ Open `.env` in your editor and fill in your credentials. See the [Environment Va
 **Minimum required:**
 
 ```env
-GROQ_API_KEY=gsk_your_key_here     # Get free at console.groq.com
-CAMERA_URL=0                        # 0 = first USB webcam, or DroidCam index
-```
+GEMINI_API_KEY=AIza...             # Get free at aistudio.google.com
+CAMERA_URL=auto                    # auto-detect first webcam
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-2.0-flash```
 
 ### Step 4 — Frontend Setup
 
@@ -403,7 +400,7 @@ The server sends two types of messages:
 
 ## Agent Pipeline Deep Dive
 
-The AI agent is a 4-node **LangGraph stateful graph**. Each node passes enriched state to the next.
+The AI agent is a high-performance **LangGraph stateful graph**. It uses a unified multi-modal node to inspect images and reason about process failures.
 
 ```
 Camera Frame
@@ -412,26 +409,25 @@ Camera Frame
 YOLOv8 (conf ≥ CONF_THRESHOLD gate)
     │  Detection fails gate → continue to next frame
     ▼
-Node 1: classify_defect (classifier.py)
-    │  Input:  raw_detections, camera_id, line_id, [frame image]
-    │  Output: defect_type, severity, zone, confidence
+Node 1: Unified Analyzer (analyzer.py)
+    │  Input:  frame_image, raw_detections, defect_history
+    │  Logic:  Gemini 1.5 Flash Vision analyzes the image
+    │  Output: type, severity, zone, cause_hypothesis, rationale
     ▼
-Node 2: find_root_cause (root_cause.py)
-    │  Input:  defect_type, severity + MongoDB defect history
-    │  Output: cause_hypothesis, cause_confidence
-    ▼
-Node 3: recommend_action (action.py)
-    │  Input:  severity (CRITICAL → safety override, no LLM)
-    │  Output: action (HALT_LINE | FLAG_QC | LOG_ONLY), action_rationale
-    ▼
-Node 4: generate_report (reporter.py)
-    │  Input:  full agent state
+Node 2: generate_report (reporter.py)
+    │  Input:  full analyzer state
     │  Output: report_payload (structured JSON for PDF)
     ▼
 ProcessPool → PDF bytes → GridFS
 MongoDB → defect_events collection
 WebSocket → React Dashboard
 ```
+
+### Vision-Based Inspection
+Unlike traditional text-based RCA, our system sends the **actual captured frame** to Gemini 1.5 Flash. The AI "sees" the product and performs a professional visual inspection to distinguish between different types of physical damage (cracks vs. scratches vs. surface contamination).
+
+### Pydantic Structured Outputs
+We use LangChain's `.with_structured_output()` to guarantee that the AI always returns valid, schema-compliant JSON. This eliminates the "Inconclusive Analysis" errors found in earlier versions.
 
 ### Safety Override
 
@@ -534,42 +530,25 @@ YOLO_MODEL=yolov8n.onnx
 
 ## Troubleshooting
 
+### LLM Rate Limits (429 Errors)
+
+- If using the Gemini Free Tier, you are limited to 15 requests per minute.
+- **Fix:** We consolidated the agent into a single-call analyzer, allowing for 15 detections/minute.
+- If you still hit limits, the system will automatically use a **Safe Fallback** rule-based hypothesis so the dashboard remains functional.
+
 ### Camera feed is stuck / frozen
 
 - Make sure no other application (Phone Link, Teams, OBS) is using the camera.
-- Try changing `CAMERA_URL` from `0` to `1` or `2` in `.env`.
+- Try changing `CAMERA_URL` from `auto` to a specific index like `0` or `1`.
 - Restart the pipeline by clicking **Stop** then **Start**.
-- Reduce `SAMPLE_FPS` to `10` or `15` to reduce USB bandwidth pressure.
 
-### "Root cause analysis inconclusive" in event cards
+### PDF generation warnings
 
-- This is caused by the LLM returning a comma inside a JSON string value, which breaks standard JSON parsing.
-- The system has a fallback regex parser for this, but it may fail on very malformed responses.
-- **Workaround:** Switch to `LLM_MODEL=mixtral-8x7b-32768` in `.env`, which tends to produce cleaner JSON.
-- **Planned fix:** Upgrade to structured outputs (`.with_structured_output()`) in v1.0.
+- Warnings like `getSize: Not a float` were caused by legacy CSS units and have been **patched** in the latest `template.html`.
 
-### Defect events panel not updating live
+### Timezone is wrong
 
-- Ensure the WebSocket connection is `OPEN` — check the browser console for errors.
-- The frontend auto-reconnects within 2 seconds if the connection drops.
-- This was previously caused by a MongoDB `ObjectId` serialization bug — now patched.
-
-### "groq.APIConnectionError: Connection error"
-
-- This is a transient internet connectivity issue to the Groq API.
-- The system now handles this gracefully with a fallback event saved to MongoDB.
-- Your live camera feed will not be interrupted.
-- If persistent, check your internet connection or try switching `LLM_PROVIDER=gemini`.
-
-### Backend crashes with `ValueError: list.remove(x): x not in list`
-
-- This was a WebSocket connection manager race condition. It is now patched.
-- If you see this error, update to the latest version of `main.py`.
-
-### getSize: Not a float '-0.02em' in logs
-
-- This is a harmless CSS warning from the `xhtml2pdf` library. It does not affect the system in any way and can be safely ignored.
-
+- The system now auto-detects your local timezone. Dashboard charts and PDF reports are localized to **IST** by default.
 ---
 
 <div align="center">

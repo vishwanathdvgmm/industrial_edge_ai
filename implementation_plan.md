@@ -11,9 +11,9 @@ This plan outlines the concrete, prioritized changes required to reach a stable,
 | # | Issue | Impact | Status |
 |---|-------|--------|--------|
 | 1 | Live event panel requires page reload | High — UX broken | ✅ Fixed (ObjectId serialization) |
-| 2 | "Root cause analysis inconclusive" (JSON hallucination) | High — broken output | ⚠️ Partial fix (regex fallback) |
+| 2 | "Root cause analysis inconclusive" (JSON hallucination) | High — broken output | ✅ Fixed (Unified Pydantic Analyzer) |
 | 3 | Video feed freezes for 2–4s on detection | High — unstable | ✅ Fixed (ProcessPool for PDF) |
-| 4 | Timezone shows UTC instead of local time | Medium — confusing | ✅ Fixed (frontend locale parsing) |
+| 4 | Timezone shows UTC instead of local time | Medium — confusing | ✅ Fixed (frontend & backend IST) |
 | 5 | WebSocket zombie on disconnect | Medium — crashes server | ✅ Fixed |
 | 6 | Old frames in PDF reports (buffer latency) | Medium — wrong data | ✅ Fixed (CameraStream thread) |
 | 7 | Single camera only | Medium — hackathon demo OK | ⬜ Planned for v1.0 |
@@ -222,8 +222,8 @@ Extend `/health` to return per-camera pipeline status, LLM connectivity, and Mon
 - [x] PDF report generation with MongoDB storage
 - [x] LLM fallback for network errors
 - [x] Local timezone display in UI
-- [ ] Structured LLM outputs (Phase 1) — **do before submission**
+- [x] Structured LLM outputs (Phase 1) — **COMPLETED**
 - [ ] Multi-camera support (Phase 2) — time permitting
 - [ ] ONNX acceleration (Phase 3.1) — quick win, 1-line change
-- [ ] Agent cooldown (Phase 3.2) — recommended
+- [ ] Agent cooldown (Phase 3.2) — **COMPLETED** (10s class-based debounce)
 
